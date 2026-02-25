@@ -5,7 +5,7 @@ setup(
     version="0.1.0",
     packages=find_packages(),
     install_requires=[
-        "tree-sitter>=0.21.0",
+        "tree-sitter==0.21.3",
         "tree-sitter-languages",
         "httpx",
         "python-dotenv",
