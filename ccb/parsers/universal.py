@@ -1,16 +1,38 @@
-import tree_sitter_languages
 import tree_sitter
-from tree_sitter import Node
+from tree_sitter import Node, Language
 from .base import BaseParser, SymbolInfo
 from typing import List, Optional
+
+# Import official grammars
+import tree_sitter_python
+import tree_sitter_go
+import tree_sitter_java
+import tree_sitter_typescript
+import tree_sitter_cpp
+import tree_sitter_c
 
 class UniversalParser(BaseParser):
     def __init__(self, lang_id: str, extensions: List[str]):
         self.lang_id = lang_id
         self.extensions = extensions
-        self.language = tree_sitter_languages.get_language(lang_id)
-        self.parser = tree_sitter.Parser()
-        self.parser.set_language(self.language)
+        
+        # Initialize language using the new 0.23+ API
+        if lang_id == 'python':
+            self.language = Language(tree_sitter_python.language())
+        elif lang_id == 'go':
+            self.language = Language(tree_sitter_go.language())
+        elif lang_id == 'java':
+            self.language = Language(tree_sitter_java.language())
+        elif lang_id == 'typescript':
+            self.language = Language(tree_sitter_typescript.language_typescript())
+        elif lang_id == 'cpp':
+            self.language = Language(tree_sitter_cpp.language())
+        elif lang_id == 'c':
+            self.language = Language(tree_sitter_c.language())
+        else:
+            raise ValueError(f"Unsupported language: {lang_id}")
+
+        self.parser = tree_sitter.Parser(self.language)
 
     def supports(self, extension: str) -> bool:
         return extension in self.extensions
@@ -50,7 +72,7 @@ class UniversalParser(BaseParser):
                 # Metadata
                 bases = self._get_bases(node) if symbol_type == 'class' else []
                 fields = self._get_fields(node) if symbol_type == 'class' else []
-                calls = self._get_calls(node) # Extract calls within this body
+                calls = self._get_calls(node)
 
                 symbols.append(SymbolInfo(
                     name=display_name,
@@ -71,23 +93,16 @@ class UniversalParser(BaseParser):
             self._visit(child, current_breadcrumb, symbols)
 
     def _get_calls(self, root_node: Node) -> List[str]:
-        """Lightweight call extraction using AST."""
         calls = set()
-        
-        # Mapping of node types that represent a function call in different languages
         call_node_types = ['call', 'call_expression', 'method_invocation']
         
         def find_calls(node: Node):
             if node.type in call_node_types:
-                # Extract name from the call node
-                # e.g., Python: (call function: (identifier))
-                # e.g., Java: (method_invocation name: (identifier))
                 name_node = node.child_by_field_name('function') or \
                             node.child_by_field_name('name') or \
                             node.child_by_field_name('declarator')
                 
                 if not name_node:
-                    # Fallback for some grammars where the first child is the function name
                     for child in node.children:
                         if child.type in ['identifier', 'attribute', 'field_expression', 'member_expression']:
                             name_node = child
@@ -95,7 +110,6 @@ class UniversalParser(BaseParser):
                 
                 if name_node:
                     call_name = name_node.text.decode('utf8') if isinstance(name_node.text, bytes) else str(name_node.text)
-                    # Clean class member calls (e.g., self.login -> login)
                     if "." in call_name: call_name = call_name.split(".")[-1]
                     if "->" in call_name: call_name = call_name.split("->")[-1]
                     if "::" in call_name: call_name = call_name.split("::")[-1]
@@ -119,7 +133,7 @@ class UniversalParser(BaseParser):
         elif self.lang_id == 'cpp':
             base_clause = node.child_by_field_name('base_class_clause')
             if base_clause:
-                bases = [c.text.decode('utf8') for c in base_clause.children if c.type == 'type_identifier']
+                bases = [c.text.decode('utf8') for c in base_clause.children if c.type in ['type_identifier', 'qualified_identifier']]
         return bases
 
     def _get_fields(self, node: Node) -> List[str]:
