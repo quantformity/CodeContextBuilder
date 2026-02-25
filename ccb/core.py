@@ -117,6 +117,23 @@ class Scanner:
         self._save_registry()
         self._write_markdown(root, contexts_by_folder, folder_dependencies)
 
+    def clean(self, root_dir: str):
+        root = pathlib.Path(root_dir)
+        print(f"Cleaning up context files in {root}...")
+        
+        # 1. Remove registry
+        if self.registry_path.exists():
+            self.registry_path.unlink()
+            print(f"Removed {self.registry_path}")
+        
+        # 2. Remove all .context.md files
+        count = 0
+        for md_file in root.rglob(config.output_file_name):
+            md_file.unlink()
+            count += 1
+        
+        print(f"Removed {count} {config.output_file_name} files.")
+
     def _extract_dependencies(self, content: str, deps: Set[str]):
         patterns = [
             r'^import\s+([\w\.]+)', 

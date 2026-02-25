@@ -16,6 +16,14 @@ def scan(path):
     click.echo("Scan complete!")
 
 @main.command()
+@click.argument('path', default='.')
+def clean(path):
+    """Remove all .context.md files and indexing cache."""
+    scanner = Scanner()
+    scanner.clean(path)
+    click.echo("Cleanup complete!")
+
+@main.command()
 def init():
     """Interactively configure LLM settings and create .ccbenv."""
     click.echo("🚀 Code Context Builder - Configuration")

@@ -61,6 +61,12 @@ Run the scanner on your current directory or a specific path:
 ccb scan .
 ```
 
+### Cleanup
+To remove all generated `.context.md` files and the indexing cache:
+```bash
+ccb clean .
+```
+
 ### What happens?
 1. **Registry Check**: CCB checks `.code-index/registry.json` to see which files have changed.
 2. **Parsing**: New/changed files are parsed using Tree-sitter to extract public classes and functions.
